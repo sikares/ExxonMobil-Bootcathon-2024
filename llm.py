@@ -16,6 +16,8 @@ from langchain_community.document_loaders import PyPDFLoader, DirectoryLoader
 
 # from langchain import PromptTemplate, GROQ_LLM, StrOutputParser, Memory, RunnablePassthrough
 
+def invoke_model(query):
+    return app.invoke(query)
 
 # CSV Import
 
@@ -24,7 +26,7 @@ st.set_page_config(page_title="ExxonMobil Customer Support Chatbot", page_icon="
 
 @st.cache_resource
 def load_documents():
-    loader = DirectoryLoader("./data2/data2", glob="**/*.txt")
+    loader = DirectoryLoader("./data2", glob="**/*.txt")
     docs_all = loader.load()
     return docs_all
 
@@ -678,5 +680,5 @@ workflow.add_edge("state_printer", END)
 app = workflow.compile()
 
 
-def invoke_model(query):
-    return app.invoke(query)
+# def invoke_model(query):
+#     return app.invoke(query)
