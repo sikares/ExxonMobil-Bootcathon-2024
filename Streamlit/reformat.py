@@ -48,7 +48,7 @@ def save_reformatted_data_to_txt(data, filename):
         json.dump(data, file, indent=4, ensure_ascii=False)
 
 def main():
-    input_filename = 'data2/data2/location.txt'
+    input_filename = 'Data/Data/location.txt'
     output_filename = 'reformatted_location.txt'
 
     with open(input_filename, 'r', encoding='utf-8') as file:

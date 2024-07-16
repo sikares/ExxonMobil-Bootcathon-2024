@@ -3,6 +3,8 @@ import streamlit as st
 from dotenv import load_dotenv
 from pprint import pprint
 
+
+
 load_dotenv()
 
 os.environ["GROQ_API_KEY"] = os.getenv("GROQ_API")
@@ -16,28 +18,33 @@ from langchain_community.document_loaders import PyPDFLoader, DirectoryLoader
 
 # from langchain import PromptTemplate, GROQ_LLM, StrOutputParser, Memory, RunnablePassthrough
 
-def invoke_model(query):
-    return app.invoke(query)
 
 # CSV Import
 
-st.set_page_config(page_title="ExxonMobil Customer Support Chatbot", page_icon="⛽", layout="wide", initial_sidebar_state="collapsed")
 
 
 @st.cache_resource
 def load_documents():
-    loader = DirectoryLoader("./data2", glob="**/*.txt")
+    loader = DirectoryLoader("./Data/Data", glob="**/*.txt")
     docs_all = loader.load()
     return docs_all
+
+# @st.cache_resource
+# def invoke_model(query):
+#     return app.invoke(query)
+
+def invoke_model(query):
+    return app.invoke(query)
 
 docs_all = load_documents()
 print("======= Loaded documents =======")
 print(len(docs_all))
 
+
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 #splitting the text into
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=200)
 texts = text_splitter.split_documents(docs_all)
 
 # from langchain.embeddings import HuggingFaceBgeEmbeddings
@@ -71,6 +78,7 @@ from langchain_core.output_parsers import StrOutputParser, JsonOutputParser
 from langchain_groq import ChatGroq
 from langchain_community.tools import DuckDuckGoSearchRun
 from langchain_community.utilities import DuckDuckGoSearchAPIWrapper
+
 GROQ_LLM = ChatGroq(
             model="llama3-70b-8192",
         )
@@ -113,11 +121,6 @@ rag_prompt = PromptTemplate(
 
 rag_prompt_chain = rag_prompt | GROQ_LLM | StrOutputParser()
 
-# QUESTION = """What can I do in the Westworld Park?"""
-# CONTEXT = retriever.invoke(QUESTION)
-
-# result = rag_prompt_chain.invoke({"question": QUESTION, "context":CONTEXT})
-# print(result)
 rag_chain = (
     {"context": retriever , "question": RunnablePassthrough()}
     | rag_prompt
@@ -148,7 +151,7 @@ def write_markdown_file(content, filename):
 
 
 
-#Categorize EMAIL
+#Categorize answer
 prompt = PromptTemplate(
     template="""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
     You are the Support Categorizer Agent for ExxonMobil, a global leader in motor-oils, energy, and chemical manufacturing. You are an expert at understanding customer inquiries and categorizing them into useful categories based on the ExxonMobil Thailand website. Keep in mind that lubricant and motor-oils are the same and these products are the main focus of the company.
@@ -169,14 +172,14 @@ prompt = PromptTemplate(
             eg:
             'motor-oils' \
 
-    QUESTION CONTENT:\n\n{initial_email}\n\n
+    QUESTION CONTENT:\n\n{initial_question}\n\n
     <|eot_id|>
     <|start_header_id|>assistant<|end_header_id|>
     """,
-    input_variables=["initial_email"],
+    input_variables=["initial_question"],
 )
 
-email_category_generator = prompt | GROQ_LLM | StrOutputParser()
+question_category_generator = prompt | GROQ_LLM | StrOutputParser()
 
 
 ## Research Router
@@ -198,10 +201,10 @@ research_router_prompt = PromptTemplate(
     no preamble or explanation. Use both the initial question and the question category to make your decision.
 
     <|eot_id|><|start_header_id|>user<|end_header_id|>
-    Question to route INITIAL_QUESTION: {initial_email} \n
-    QUESTION_CATEGORY: {email_category} \n
+    Question to route INITIAL_QUESTION: {initial_question} \n
+    QUESTION_CATEGORY: {question_category} \n
     <|eot_id|><|start_header_id|>assistant<|end_header_id|>""",
-    input_variables=["initial_email","email_category"],
+    input_variables=["initial_question","question_category"],
 )
 research_router = research_router_prompt | GROQ_LLM | JsonOutputParser()
 
@@ -213,13 +216,13 @@ search_rag_prompt = PromptTemplate(
     
     If the INITIAL_QUESTION is comparing two products of ExxonMobil, determine for the benefits and the different of each product, then suggest the best product to the customer. However, if the question is about the benefits of a specific product, provide the benefits of that product and do not compare.
 
-    Return a JSON with a single key 'questions' containing up to 3 strings, with no preamble or explanation.
+    Return a JSON with a single key 'questions' containing up to 3 strings, with no preamble or explanation
 
     <|eot_id|><|start_header_id|>user<|end_header_id|>
-    INITIAL_QUESTION: {initial_email} \n
-    QUESTION_CATEGORY: {email_category} \n
+    INITIAL_QUESTION: {initial_question} \n
+    QUESTION_CATEGORY: {question_category} \n
     <|eot_id|><|start_header_id|>assistant<|end_header_id|>""",
-    input_variables=["initial_email","email_category"],
+    input_variables=["initial_question","question_category"],
 )
 
 
@@ -229,7 +232,7 @@ research_info = None
 draft_writer_prompt = PromptTemplate(
     template="""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
     You are the Answer Draft Writer Agent for ExxonMobil. Take the INITIAL_QUESTION below from a human that has contacted us, the question_category assigned by the categorizer agent, and the research from the research agent, and write a helpful response in a thoughtful and friendly way.
-
+    Furthermore, make sure to write easy to read and understand responses that are helpful to the customer.
             If the question is 'other', ask for more details.
             If the question is 'customer_feedback', thank them and address their feedback.
             If the question is 'corporate-information', provide relevant corporate info.
@@ -240,22 +243,21 @@ draft_writer_prompt = PromptTemplate(
             If the question is 'motor-oils', provide information about motor oils products and services.
 
             Do not invent information that hasn't been provided by the research_info or in the initial_question.
-            Sign off the responses appropriately from ExxonMobil.
 
-            Return the response in a JSON with a single key 'email_draft' and no preamble or explanation.
+            Return the response in a JSON with a single key 'answer_draft' and no preamble or explanation.
 
     <|eot_id|><|start_header_id|>user<|end_header_id|>
-    INITIAL_QUESTION: {initial_email} \n
-    QUESTION_CATEGORY: {email_category} \n
+    INITIAL_QUESTION: {initial_question} \n
+    QUESTION_CATEGORY: {question_category} \n
     RESEARCH_INFO: {research_info} \n
     <|eot_id|><|start_header_id|>assistant<|end_header_id|>""",
-    input_variables=["initial_email","email_category","research_info"],
+    input_variables=["initial_question","question_category","research_info"],
 )
 
 
 draft_writer_chain = draft_writer_prompt | GROQ_LLM | JsonOutputParser()
 
-email_category = 'customer_feedback'
+question_category = 'customer_feedback'
 research_info = None
 
 
@@ -274,11 +276,11 @@ rewrite_router_prompt = PromptTemplate(
 
     
     <|eot_id|><|start_header_id|>user<|end_header_id|>
-    INITIAL_QUESTION: {initial_email} \n
-    QUESTION_CATEGORY: {email_category} \n
-    DRAFT_ANSWER: {draft_email} \n
+    INITIAL_QUESTION: {initial_question} \n
+    QUESTION_CATEGORY: {question_category} \n
+    DRAFT_ANSWER: {draft_answer} \n
     <|eot_id|><|start_header_id|>assistant<|end_header_id|>""",
-    input_variables=["initial_email","email_category","draft_email"],
+    input_variables=["initial_question","question_category","draft_answer"],
 )
 
 
@@ -297,48 +299,48 @@ draft_analysis_prompt = PromptTemplate(
     Return the analysis in a JSON with a single key 'draft_analysis' and no preamble or explanation.
 
     <|eot_id|><|start_header_id|>user<|end_header_id|>
-    INITIAL_QUESTION: {initial_email} \n\n
-    QUESTION_CATEGORY: {email_category} \n\n
+    INITIAL_QUESTION: {initial_question} \n\n
+    QUESTION_CATEGORY: {question_category} \n\n
     RESEARCH_INFO: {research_info} \n\n
-    DRAFT_ANSWER: {draft_email} \n\n
+    DRAFT_ANSWER: {draft_answer} \n\n
     <|eot_id|><|start_header_id|>assistant<|end_header_id|>""",
-    input_variables=["initial_email","email_category","research_info"],
+    input_variables=["initial_question","question_category","research_info"],
 )
 draft_analysis_chain = draft_analysis_prompt | GROQ_LLM | JsonOutputParser()
 
 
-email_category = 'motor-oil'
+question_category = 'motor-oil'
 research_info = None
-draft_email = "Describe the benefit of Mobil Super Moto™ 20W-40"
+draft_answer = "Describe the benefit of Mobil Super Moto™ 20W-40"
 
 
-rewrite_email_prompt = PromptTemplate(
+rewrite_answer_prompt = PromptTemplate(
     template="""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
     You are the Final Answer Draft Agent. Read the draft analysis below from the QC Agent and use it to rewrite and improve the DRAFT_ANSWER to create a final answer.
 
     Do not make up or add information that hasn't been provided by the research_info or in the initial_question.
 
-    Return the final Answer Draft as JSON with a single key 'final_email' which is a string and no preamble or explanation.
+    Return the final Answer Draft as JSON with a single key 'final_answer' which is a string and no preamble or explanation.
 
     <|eot_id|><|start_header_id|>user<|end_header_id|>
-    INITIAL_QUESTION: {initial_email} \n\n
-    QUESTION_CATEGORY: {email_category} \n\n
+    INITIAL_QUESTION: {initial_question} \n\n
+    QUESTION_CATEGORY: {question_category} \n\n
     RESEARCH_INFO: {research_info} \n\n
-    DRAFT_ANSWER: {draft_email} \n\n
-    DRAFT_ANSWER_FEEDBACK: {email_analysis} \n\n
+    DRAFT_ANSWER: {draft_answer} \n\n
+    DRAFT_ANSWER_FEEDBACK: {answer_analysis} \n\n
     <|eot_id|><|start_header_id|>assistant<|end_header_id|>""",
-    input_variables=["initial_email",
-                     "email_category",
+    input_variables=["initial_question",
+                     "question_category",
                      "research_info",
-                     "email_analysis",
-                     "draft_email",
+                     "answer_analysis",
+                     "draft_answer",
                      ],
 )
-rewrite_chain = rewrite_email_prompt | GROQ_LLM | JsonOutputParser()
+rewrite_chain = rewrite_answer_prompt | GROQ_LLM | JsonOutputParser()
 
-email_category = 'customer_feedback'
+question_category = 'customer_feedback'
 research_info = None
-draft_email = "Yo we can't help you, best regards Sarah"
+draft_answer = "Yo we can't help you, best regards Sarah"
 
 
 from langchain.schema import Document
@@ -353,34 +355,34 @@ class GraphState(TypedDict):
     Represents the state of our graph.
 
     Attributes:
-        initial_email: email
-        email_category: email category
-        draft_email: LLM generation
-        final_email: LLM generation
+        initial_question: answer
+        question_category: answer category
+        draft_answer: LLM generation
+        final_answer: LLM generation
         research_info: list of documents
         info_needed: whether to add search info
         num_steps: number of steps
     """
-    initial_email : str
-    email_category : str
-    draft_email : str
-    final_email : str
+    initial_question : str
+    question_category : str
+    draft_answer : str
+    final_answer : str
     research_info : List[str] 
     info_needed : bool
     num_steps : int
-    draft_email_feedback : dict
+    draft_answer_feedback : dict
     rag_questions : List[str]
 
-def categorize_email(state):
-    """take the initial email and categorize it"""
+def categorize_answer(state):
+    """take the initial answer and categorize it"""
     print("---CATEGORIZING INITIAL Question---")
-    initial_email = state['initial_email']
+    initial_question = state['initial_question']
     num_steps = int(state['num_steps'])
     num_steps += 1
 
-    email_category = email_category_generator.invoke({"initial_email": initial_email})
-    print(email_category)
-    # if email_category == 'previous_interaction':
+    question_category = question_category_generator.invoke({"initial_question": initial_question})
+    print(question_category)
+    # if question_category == 'previous_interaction':
     #     if 'generated' not in st.session_state:
     #         st.session_state.get('past', [])
     #     if 'past' not in st.session_state:
@@ -390,7 +392,7 @@ def categorize_email(state):
 
         # return 
     
-    return {"email_category": email_category, "num_steps":num_steps}
+    return {"question_category": question_category, "num_steps":num_steps}
 
 conclusion_prompt = PromptTemplate(
     template="""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
@@ -428,17 +430,17 @@ previous_prompt_agent = previous_prompt | GROQ_LLM | StrOutputParser()
 
 
 def research_info_search(state):
-    print("---RESEARCH INFO RAG---")
+    # print("---RESEARCH INFO RAG---")
     
     print("---RESEARCH INFO RAG---")
-    initial_email = state["initial_email"]
-    email_category = state["email_category"]  # Remove leading/trailing whitespace
+    initial_question = state["initial_question"]
+    question_category = state["question_category"]  # Remove leading/trailing whitespace
     num_steps = state['num_steps']
     num_steps += 1
     
 
-    questions = question_rag_chain.invoke({"initial_email": initial_email,
-                                                "email_category": email_category })
+    questions = question_rag_chain.invoke({"initial_question": initial_question,
+                                                "question_category": question_category })
     questions = questions['questions']
     print(questions)
     final_results = []
@@ -467,8 +469,8 @@ def research_info_search(state):
     
 
 #     else:
-#         questions = question_rag_chain.invoke({"initial_email": initial_email,
-#                                                 "email_category": email_category })
+#         questions = question_rag_chain.invoke({"initial_question": initial_question,
+#                                                 "question_category": question_category })
 #         questions = questions['questions']
 #         print(questions)
 #         rag_results = []
@@ -499,90 +501,90 @@ def research_info_search(state):
 #         return {"research_info": final_results,"rag_questions":questions, "num_steps":num_steps}
 # # return {"research_info": rag_results,"rag_questions":questions, "num_steps":num_steps}
 
-def draft_email_writer(state):
+def draft_answer_writer(state):
     print("---DRAFT ANSWER WRITER---")
     ## Get the state
-    initial_email = state["initial_email"]
-    email_category = state["email_category"]
+    initial_question = state["initial_question"]
+    question_category = state["question_category"]
     research_info = state["research_info"]
     num_steps = state['num_steps']
     num_steps += 1
 
-    # Generate draft email
-    draft_email = draft_writer_chain.invoke({"initial_email": initial_email,
-                                     "email_category": email_category,
+    # Generate draft answer
+    draft_answer = draft_writer_chain.invoke({"initial_question": initial_question,
+                                     "question_category": question_category,
                                      "research_info":research_info})
-    print(draft_email)
-    # print(type(draft_email))
+    print(draft_answer)
+    # print(type(draft_answer))
 
-    email_draft = draft_email['email_draft']
-    # write_markdown_file(email_draft, "draft_email")
+    answer_draft = draft_answer['answer_draft']
+    # write_markdown_file(answer_draft, "draft_answer")
 
-    return {"draft_email": email_draft, "num_steps":num_steps}
+    return {"draft_answer": answer_draft, "num_steps":num_steps}
 
-def analyze_draft_email(state):
+def analyze_draft_answer(state):
     print("---DRAFT ANSWER ANALYZER---")
     ## Get the state
-    initial_email = state["initial_email"]
-    email_category = state["email_category"]
-    draft_email = state["draft_email"]
+    initial_question = state["initial_question"]
+    question_category = state["question_category"]
+    draft_answer = state["draft_answer"]
     research_info = state["research_info"]
     num_steps = state['num_steps']
     num_steps += 1
 
-    # Generate draft email
-    draft_email_feedback = draft_analysis_chain.invoke({"initial_email": initial_email,
-                                                "email_category": email_category,
+    # Generate draft answer
+    draft_answer_feedback = draft_analysis_chain.invoke({"initial_question": initial_question,
+                                                "question_category": question_category,
                                                 "research_info":research_info,
-                                                "draft_email":draft_email}
+                                                "draft_answer":draft_answer}
                                                )
-    # print(draft_email)
-    # print(type(draft_email))
+    # print(draft_answer)
+    # print(type(draft_answer))
 
-    # write_markdown_file(str(draft_email_feedback), "draft_email_feedback")
-    return {"draft_email_feedback": draft_email_feedback, "num_steps":num_steps}
+    # write_markdown_file(str(draft_answer_feedback), "draft_answer_feedback")
+    return {"draft_answer_feedback": draft_answer_feedback, "num_steps":num_steps}
 
-def rewrite_email(state):
+def rewrite_answer(state):
     print("---REWRITE DRAFT ---")
     ## Get the state
-    initial_email = state["initial_email"]
-    email_category = state["email_category"]
-    draft_email = state["draft_email"]
+    initial_question = state["initial_question"]
+    question_category = state["question_category"]
+    draft_answer = state["draft_answer"]
     research_info = state["research_info"]
-    draft_email_feedback = state["draft_email_feedback"]
+    draft_answer_feedback = state["draft_answer_feedback"]
     num_steps = state['num_steps']
     num_steps += 1
 
-    # Generate draft email
-    final_email = rewrite_chain.invoke({"initial_email": initial_email,
-                                                "email_category": email_category,
+    # Generate draft answer
+    final_answer = rewrite_chain.invoke({"initial_question": initial_question,
+                                                "question_category": question_category,
                                                 "research_info":research_info,
-                                                "draft_email":draft_email,
-                                                "email_analysis": draft_email_feedback}
+                                                "draft_answer":draft_answer,
+                                                "answer_analysis": draft_answer_feedback}
                                                )
 
-    # write_markdown_file(str(final_email), "final_email")
-    return {"final_email": final_email['final_email'], "num_steps":num_steps}
+    # write_markdown_file(str(final_answer), "final_answer")
+    return {"final_answer": final_answer['final_answer'], "num_steps":num_steps}
 
 
 
 def no_rewrite(state):
     print("---NO REWRITE DRAFT ---")
     ## Get the state
-    draft_email = state["draft_email"]
+    draft_answer = state["draft_answer"]
     num_steps = state['num_steps']
     num_steps += 1
 
-    # write_markdown_file(str(draft_email), "final_email")
-    return {"final_email": draft_email, "num_steps":num_steps}
+    # write_markdown_file(str(draft_answer), "final_answer")
+    return {"final_answer": draft_answer, "num_steps":num_steps}
 
 def state_printer(state):
     """print the state"""
     print("---STATE PRINTER---")
-    print(f"Initial Email: {state['initial_email']} \n" )
-    print(f"Email Category: {state['email_category']} \n")
-    print(f"Draft Email: {state['draft_email']} \n" )
-    print(f"Final Email: {state['final_email']} \n" )
+    print(f"Initial answer: {state['initial_question']} \n" )
+    print(f"answer Category: {state['question_category']} \n")
+    print(f"Draft answer: {state['draft_answer']} \n" )
+    print(f"Final answer: {state['final_answer']} \n" )
     print(f"Research Info: {state['research_info']} \n")
     print(f"RAG Questions: {state['rag_questions']} \n")
     print(f"Num Steps: {state['num_steps']} \n")
@@ -590,7 +592,7 @@ def state_printer(state):
 
 def route_to_research(state):
     """
-    Route email to web search or not.
+    Route answer to web search or not.
     Args:
         state (dict): The current graph state
     Returns:
@@ -598,34 +600,34 @@ def route_to_research(state):
     """
 
     print("---ROUTE TO RESEARCH---")
-    initial_email = state["initial_email"]
-    email_category = state["email_category"]
+    initial_question = state["initial_question"]
+    question_category = state["question_category"]
 
 
-    router = research_router.invoke({"initial_email": initial_email,"email_category":email_category })
+    router = research_router.invoke({"initial_question": initial_question,"question_category":question_category })
     print(router)
     # print(type(router))
     print(router['router_decision'])
     if router['router_decision'] == 'research_info':
-        print("---ROUTE EMAIL TO RESEARCH INFO---")
+        print("---ROUTE answer TO RESEARCH INFO---")
         return "research_info"
-    elif router['router_decision'] == 'draft_email':
-        print("---ROUTE EMAIL TO DRAFT EMAIL---")
-        return "draft_email"
+    elif router['router_decision'] == 'draft_answer':
+        print("---ROUTE answer TO DRAFT answer---")
+        return "draft_answer"
     
 def route_to_rewrite(state):
 
     print("---ROUTE TO REWRITE---")
-    initial_email = state["initial_email"]
-    email_category = state["email_category"]
-    draft_email = state["draft_email"]
+    initial_question = state["initial_question"]
+    question_category = state["question_category"]
+    draft_answer = state["draft_answer"]
     # research_info = state["research_info"]
 
-    # draft_email = "Yo we can't help you, best regards Sarah"
+    # draft_answer = "Yo we can't help you, best regards Sarah"
 
-    router = rewrite_router.invoke({"initial_email": initial_email,
-                                     "email_category":email_category,
-                                     "draft_email":draft_email}
+    router = rewrite_router.invoke({"initial_question": initial_question,
+                                     "question_category":question_category,
+                                     "draft_answer":draft_answer}
                                    )
     print(router)
     print(router['router_decision'])
@@ -633,47 +635,47 @@ def route_to_rewrite(state):
         print("---ROUTE TO ANALYSIS - REWRITE---")
         return "rewrite"
     elif router['router_decision'] == 'no_rewrite':
-        print("---ROUTE EMAIL TO FINAL EMAIL---")
+        print("---ROUTE answer TO FINAL answer---")
         return "no_rewrite"
     
 
 workflow = StateGraph(GraphState)
 
 # Define the nodes
-workflow.add_node("categorize_email", categorize_email) # categorize email
+workflow.add_node("categorize_answer", categorize_answer) # categorize answer
 workflow.add_node("research_info_search", research_info_search) # web search
 workflow.add_node("state_printer", state_printer)
-workflow.add_node("draft_email_writer", draft_email_writer)
-workflow.add_node("analyze_draft_email", analyze_draft_email)
-workflow.add_node("rewrite_email", rewrite_email)
+workflow.add_node("draft_answer_writer", draft_answer_writer)
+workflow.add_node("analyze_draft_answer", analyze_draft_answer)
+workflow.add_node("rewrite_answer", rewrite_answer)
 workflow.add_node("no_rewrite", no_rewrite)
 
-workflow.set_entry_point("categorize_email")
+workflow.set_entry_point("categorize_answer")
 
 # workflow.add_conditional_edges(
-#     "categorize_email",
+#     "categorize_answer",
 #     route_to_research,
 #     {
 #         "research_info": "research_info_search",
-#         "draft_response": "draft_email_writer",
+#         "draft_response": "draft_answer_writer",
 #     },
 # )
 
-workflow.add_edge("categorize_email", "research_info_search")
-workflow.add_edge("research_info_search", "draft_email_writer")
+workflow.add_edge("categorize_answer", "research_info_search")
+workflow.add_edge("research_info_search", "draft_answer_writer")
 
 
 workflow.add_conditional_edges(
-    "draft_email_writer",
+    "draft_answer_writer",
     route_to_rewrite,
     {
-        "rewrite": "analyze_draft_email",
+        "rewrite": "analyze_draft_answer",
         "no_rewrite": "no_rewrite",
     },
 )
-workflow.add_edge("analyze_draft_email", "rewrite_email")
+workflow.add_edge("analyze_draft_answer", "rewrite_answer")
 workflow.add_edge("no_rewrite", "state_printer")
-workflow.add_edge("rewrite_email", "state_printer")
+workflow.add_edge("rewrite_answer", "state_printer")
 workflow.add_edge("state_printer", END)
 
 # Compile

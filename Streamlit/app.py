@@ -25,6 +25,7 @@ from streamlit_mic_recorder import mic_recorder
 #     st.code(message, language=None, line_numbers=False)
 
 # st.markdown(message)
+st.set_page_config(page_title="MobilBot", page_icon="⛽", layout="wide", initial_sidebar_state="collapsed")
 
 def transcribe_audio_groq(audio_file_path):
     client = Groq(api_key=os.getenv("GROQ_API_KEY"))
@@ -80,7 +81,7 @@ from llm import invoke_model  # Import the function to invoke the model
 def main():
     # st.set_page_config(page_title="ExxonMobil Customer Support Chatbot", page_icon="🛢️", layout="wide", initial_sidebar_state="collapsed")
     # st.set_page_config(page_title="ExxonMobil Customer Support Chatbot", page_icon="🛢️", layout="wide", initial_sidebar_state="collapsed")
-    st.title("ExxonMobil Customer Support Chatbot")
+    st.title("MobilBot")
     # print(get_past_and_generated())
     with st.sidebar.container():
         st.markdown(
@@ -93,8 +94,8 @@ def main():
         )
     def conversation_chat(query):
         result = invoke_model(query)
-        st.session_state['history'].append((query, result['final_email']))
-        return result['final_email']
+        st.session_state['history'].append((query, result['final_answer']))
+        return result['final_answer']
 
     def initialize_session_state():
         # initialize_session_state1()
@@ -195,7 +196,7 @@ def main():
                 """
             car_info = string_result + prompt_input
             if car_info:
-                inputs = {"initial_email":  car_info, "num_steps": 0}
+                inputs = {"initial_question":  car_info, "num_steps": 0}
                 output = conversation_chat(inputs)
                 st.session_state['past'].append( prompt_input)
                 st.session_state['generated'].append(output)
@@ -204,7 +205,7 @@ def main():
                     autoplay_audio(sound_file, Audio)
 
         elif transcription_text is not None:
-            inputs = {"initial_email": transcription_text, "num_steps": 0}
+            inputs = {"initial_question": transcription_text, "num_steps": 0}
             output = conversation_chat(inputs)
             st.session_state['past'].append(transcription_text)
             st.session_state['generated'].append(output)
@@ -214,10 +215,12 @@ def main():
                 transcription_text = None
             
         elif prompt_input:
-            inputs = {"initial_email":  prompt_input, "num_steps": 0}
+            inputs = {"initial_question":  prompt_input, "num_steps": 0}
             output = conversation_chat(inputs)
             st.session_state['past'].append( prompt_input)
             st.session_state['generated'].append(output)
+            print("======= OUTPUT =======")
+            print(output)
             if Audio and output:
                 sound_file = generate_tts_audio(output)
                 autoplay_audio(sound_file, Audio)
@@ -272,7 +275,6 @@ def main():
 
             st.session_state['generated'].append(string_result)
 
-
         if st.session_state['generated']:
             for i in range(len(st.session_state['generated'])):
                 message(st.session_state['past'][i], is_user=True, key=str(i) + '_user', avatar_style="thumbs")
@@ -281,5 +283,5 @@ def main():
     initialize_session_state()
     display_chat_history()
 
-# if __name__ == "__main__":
-main()
+if __name__ == "__main__":
+    main()
