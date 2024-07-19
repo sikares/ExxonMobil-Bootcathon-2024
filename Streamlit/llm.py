@@ -7,7 +7,7 @@ from pprint import pprint
 
 load_dotenv()
 
-os.environ["GROQ_API_KEY"] = os.getenv("GROQ_API")
+os.environ["GROQ_API_KEY"] = os.getenv("GROQ_API_KEY")
 os.environ["HF_TOKEN"] = os.getenv("HF_TOKEN")
 # print(os.getenv("GROQ_API_KEY"))
 # print(os.getenv("HF_TOKEN"))
@@ -25,7 +25,7 @@ from langchain_community.document_loaders import PyPDFLoader, DirectoryLoader
 
 @st.cache_resource
 def load_documents():
-    loader = DirectoryLoader("./Data/Data", glob="**/*.txt")
+    loader = DirectoryLoader("./Data", glob="**/*.txt")
     docs_all = loader.load()
     return docs_all
 

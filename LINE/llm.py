@@ -7,7 +7,7 @@ from pprint import pprint
 
 load_dotenv()
 
-os.environ["GROQ_API_KEY"] = os.getenv("GROQ_API")
+os.environ["GROQ_API_KEY"] = os.getenv("GROQ_API_KEY")
 os.environ["HF_TOKEN"] = os.getenv("HF_TOKEN")
 # print(os.getenv("GROQ_API_KEY"))
 # print(os.getenv("HF_TOKEN"))
