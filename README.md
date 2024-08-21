@@ -1,15 +1,15 @@
-# ⛽ExxonMobil Bootcathon 2024 (1st Runner-up for "Generative AI")
+# 🏆ExxonMobil Bootcathon 2024 (1st Runner-up for "Generative AI")
 
 Create and implement a sophisticated chatbot for ExxonMobil that is capable of answering customer inquiries and providing support. The goal is to increase ExxonMobil's revenue in Thailand by promoting and selling lubricant products, even in areas without gas stations.
 
 
 ## 💻Demo
 
-- Youtube: https://youtu.be/HxGgvHc3r9Y?si=MfI0oBARUAeF70hB
+- Youtube: [Demo Video](https://youtu.be/HxGgvHc3r9Y?si=MfI0oBARUAeF70hB)
 
-- Canva: https://www.canva.com/design/DAGJ52rZEYY/L8NCkjP9sCHD1Bv-MHaiYQ/edit?utm_content=DAGJ52rZEYY&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
+- Canva: [Design Presentation](https://www.canva.com/design/DAGJ52rZEYY/L8NCkjP9sCHD1Bv-MHaiYQ/edit?utm_content=DAGJ52rZEYY&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton)
 
-- Pitch Deck Presentation: https://www.canva.com/design/DAGK1riGZfc/l_aQi1OqX08wY-PCho4suw/edit?utm_content=DAGK1riGZfc&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
+- Pitch Deck Presentation: [Pitch Deck](https://www.canva.com/design/DAGK1riGZfc/l_aQi1OqX08wY-PCho4suw/edit?utm_content=DAGK1riGZfc&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton)
 
 
 ## 🚀Used By
@@ -31,7 +31,7 @@ To run this project, you will need to add the following environment variables to
 ## ✨Features
 
 Model (LLAMA3-70b)
-- Multi-Agent Architecture (8 agents)
+- Multi-Agent Architecture (8 Agents)
 - Online Web search
 - Speech to Text (Input)
 - Text to Speech (Output)
@@ -39,8 +39,12 @@ Model (LLAMA3-70b)
 - Inputting a location to find nearby service centers.
 - Searching for service centers.
 
+## 🏅 Certificate
 
-## 📑Run Locally
+<img src="Certificate/Sikares_Bootcathon.jpg" alt="Runner-Up Certificate" title="Runner-Up Certificate" width="550"/>
+
+
+## 📥Run Locally
 
 Clone the project
 
@@ -67,13 +71,13 @@ Start the server
 ```
 
 
-## 🌐Tech Stack
+## 🛠️Tech Stack
 
 **Client:** Streamlit
 
 **Tools:** Langchain, OpenAI-Whisper, LLAMA3-70b, GROQ, CarNET
 
 
-## 📩Feedback
+## 💬Feedback
 
 If you have any feedback, please reach out to us at sikares.n@gmail.com
