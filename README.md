@@ -2,22 +2,17 @@
 
 Create and implement a sophisticated chatbot for ExxonMobil that is capable of answering customer inquiries and providing support. The goal is to increase ExxonMobil's revenue in Thailand by promoting and selling lubricant products, even in areas without gas stations.
 
-
 ## 💻Demo
 
 - Youtube: [Demo Video](https://youtu.be/HxGgvHc3r9Y?si=MfI0oBARUAeF70hB)
-
 - Canva: [Design Presentation](https://www.canva.com/design/DAGJ52rZEYY/L8NCkjP9sCHD1Bv-MHaiYQ/edit?utm_content=DAGJ52rZEYY&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton)
-
 - Pitch Deck Presentation: [Pitch Deck](https://www.canva.com/design/DAGK1riGZfc/l_aQi1OqX08wY-PCho4suw/edit?utm_content=DAGK1riGZfc&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton)
-
 
 ## 🚀Used By
 
 This project is used by the following companies:
 
 - ExxonMobil
-
 
 ## 🔑Environment Variables
 
@@ -27,10 +22,10 @@ To run this project, you will need to add the following environment variables to
 
 `GROQ_API_KEY` = GROQ API Key
 
-
 ## ✨Features
 
 Model (LLAMA3-70b)
+
 - Multi-Agent Architecture (8 Agents)
 - Online Web search
 - Speech to Text (Input)
@@ -43,13 +38,12 @@ Model (LLAMA3-70b)
 
 <img src="Certificate/Sikares_Bootcathon.jpg" alt="Runner-Up Certificate" title="Runner-Up Certificate" width="550"/>
 
-
 ## 📥Run Locally
 
 Clone the project
 
 ```bash
-  git clone https://github.com/nutkung1/ExxonMobil-Bootcathon2024.git
+  https://github.com/sikares/ExxonMobil-Bootcathon-2024.git
 ```
 
 Go to the project directory
@@ -70,13 +64,11 @@ Start the server
   streamlit run app.py
 ```
 
-
 ## 🛠️Tech Stack
 
 **Client:** Streamlit
 
 **Tools:** Langchain, OpenAI-Whisper, LLAMA3-70b, GROQ, CarNET
-
 
 ## 💬Feedback
 
